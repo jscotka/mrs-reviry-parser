@@ -40,7 +40,7 @@ for xxx in infile:
             preamble=False
         continue
     # 461 001 BALINKA 1 
-    found_revir = re.search('(\d{3}\D+\d{3})',foo)
+    found_revir = re.search('(^[(\[\s]*\d{3}\D+\d{3})',foo)
     if found_revir:
         revir = found_revir.group(1)
         print "Actual Revir:", revir
@@ -74,23 +74,38 @@ for xxx in infile:
 intro="""<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
 <Document>
-<Style id="reka">
-<LineStyle>
-<color>ff0000</color>
-<width>4</width>
-</LineStyle>
-</Style>
-<Style id="rybnik">
-<IconStyle>
-<Icon>
-<href>http://www.iconsdb.com/icons/preview/soylent-red/star-5-xxl.png</href>
-</Icon>
-</IconStyle>
-</Style>
 """
+modnum=10
+for foo in range(0,modnum):
+    color=""
+    for bar in range(1,5):
+        if foo%bar == 0:
+            color+=str(foo)
+        else:
+            color+="0"
+    intro +="""
+    <Style id="reka{0}">
+    <LineStyle>
+    <color>ffff{1}</color>
+    <width>4</width>
+    </LineStyle>
+    </Style>
+    <Style id="rybnik{0}">
+    <IconStyle>
+    <color>ffff{1}</color>
+    <Icon><href>http://www.gstatic.com/mapspro/images/stock/1363-rec-fish.png</href></Icon>
+    </IconStyle>
+    </Style>
+""".format(foo, color)
 
 outfile.write(intro)
+
+count=0
 for foo in reviry:
+    if len(reviry[foo]['GPS'])==0:
+        print >> sys.stderr,  "ERROR: no GPS for {0}: {1}: {2}\ndetails:\n{3}".format(foo,reviry[foo]['name'],reviry[foo]['org'], reviry[foo]['text'])
+    else:
+        count += 1
     for bar in reviry[foo]['GPS']:
         outfile.write('<Placemark>\n')
         outfile.write('<name>{0}: {1}: {2}</name>'.format(reviry[foo]['name'], reviry[foo]['id'], bar[-1]))
@@ -98,10 +113,10 @@ for foo in reviry:
         #outfile.write('<description>\n<![CDATA[\n<h1>{0}</h1>\n<p>{1}</p>\n<pre>{2}</pre>\n]]>\n</description>\n'.format(bar[-2],reviry[foo]['org'], reviry[foo]['text']))
         outfile.write('<description>\nJmeno: {0}\n\nOrganizace: {1}\nPodrobny popis:\n{2}</description>\n'.format(bar[-2], reviry[foo]['org'], reviry[foo]['text']))
         if len(bar)==4:
-            outfile.write('<styleUrl>#rybnik</styleUrl>\n')
+            outfile.write('<styleUrl>#rybnik{0}</styleUrl>\n'.format(count%modnum))
             outfile.write('<Point> <coordinates>{0},{1}\n</coordinates> </Point>\n'.format(bar[1],bar[0]))
         elif len(bar)==6:
-            outfile.write('<styleUrl>#reka</styleUrl>\n')
+            outfile.write('<styleUrl>#reka{0}</styleUrl>\n'.format(count%modnum))
             outfile.write('<LineString><tessellate>1</tessellate><coordinates>{0},{1}\n{2},{3}\n</coordinates> </LineString>\n'.format(bar[1],bar[0],bar[3],bar[2]))
         outfile.write('</Placemark>')
 
