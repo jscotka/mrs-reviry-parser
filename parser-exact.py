@@ -76,27 +76,22 @@ intro="""<?xml version="1.0" encoding="UTF-8"?>
 <Document>
 """
 modnum=10
+colors=["ff0000", "ffff00", "ff00ff", "990000", "99ff00", "9900ff", "ff9900", "ff0099", "550000", "55ff00", "5500ff"]
 for foo in range(0,modnum):
-    color=""
-    for bar in range(1,5):
-        if foo%bar == 0:
-            color+=str(foo)
-        else:
-            color+="0"
     intro +="""
     <Style id="reka{0}">
     <LineStyle>
-    <color>ffff{1}</color>
+    <color>ff{1}</color>
     <width>4</width>
     </LineStyle>
     </Style>
     <Style id="rybnik{0}">
     <IconStyle>
-    <color>ffff{1}</color>
+    <color>ff{1}</color>
     <Icon><href>http://www.gstatic.com/mapspro/images/stock/1363-rec-fish.png</href></Icon>
     </IconStyle>
     </Style>
-""".format(foo, color)
+""".format(foo, colors[foo])
 
 outfile.write(intro)
 
