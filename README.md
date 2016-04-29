@@ -19,4 +19,14 @@ Select your interest part and call code:
 
 Usage:
 
- `$ ./parser-exact.py  -i output.txt -o output.kml`
+ `$ ./parser-exact.py --help
+Usage: parser-exact.py [options]
+
+Options:
+  -h, --help            show this help message and exit
+  -i FILEINPUT, --input=FILEINPUT
+                        read input file
+  -o FILEOUTPUT, --output=FILEOUTPUT
+                        write results to file
+  -q, --quiet           don't print debug messages
+`
