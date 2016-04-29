@@ -35,6 +35,8 @@ revir = "X"
 multi=""
 for xxx in infile:
     foo = xxx.replace("–","-").replace(" "," ").replace("\t"," ").replace("<","").replace(">","")
+    if "Moravu a Slezsko" in foo:
+        continue
     if preamble:
         if re.search('REV.*RY.*PSTRUHOV.*', foo):
             preamble=False
@@ -45,7 +47,7 @@ for xxx in infile:
         revir = found_revir.group(1)
         print "Actual Revir:", revir
     if reviry.has_key(revir):
-        if re.search('^\s*GPS.*Z.*K',foo):
+        if re.search('^\s*\(?\s*GPS.*Z.*K',foo):
             print "   reka: ",foo
             co=re.search('Z\S+\D+([^N]+)\S+\D+([^E]+)\S+\D+([^N]+)\S+\D+([^E]+)',foo)
             if co:
@@ -54,14 +56,23 @@ for xxx in infile:
             else:
                 print >> sys.stderr, "ERROR unable to find all GPS revir:{0} (reka): {1}".format(revir, foo)
                 
-        elif re.search('^\s*GPS',foo):
+        elif re.search('^\s*I*\s*\(?\s*GPS',foo):
             print "   rybnik: ", foo
-            co=re.search('\S+\s+([^N]+)\S+\s+([^E]+)',foo)
+            co=re.search('\s*I*\s*\(?\s*\S+\s+([^N]+)\S+\s+([^E]+)',foo)
             if co:
                 reviry[revir]['GPS'].append([convert(co.group(1)), convert(co.group(2)), multi, foo])
                 print "adding rybnik:", revir, convert(co.group(1)), convert(co.group(2))
             else:
                 print >> sys.stderr,  "ERROR unable to find all GPS revir:{0} (rybnik): {1}".format(revir, foo)
+        elif re.search('GPS\S*\s+([^N]+)N\S*\s+([^E]+)E',foo):
+            print "  misto (zakaz ci rybnik?): ", foo
+            co=re.search('GPS\S*\s+([^N]+)N\S*\s+([^E]+)E',foo)
+            if co:
+                reviry[revir]['GPS'].append([convert(co.group(1)), convert(co.group(2)), multi, foo])
+                print " misto (zakaz ci rybnik?)", revir, convert(co.group(1)), convert(co.group(2))
+            else:
+                print >> sys.stderr,  "ERROR unable to find all GPS revir:{0} (rybnik): {1}".format(revir, foo)
+        
         elif re.search('\s*\S+\s+.*GPS',foo):
             print >> sys.stderr,  "WARN: GPS used inside revir:{0} text:{1}".format(revir, foo)
         reviry[revir]['text'] += foo
@@ -75,7 +86,7 @@ intro="""<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
 <Document>
 """
-modnum=10
+modnum=1
 colors=["ff0000", "ffff00", "ff00ff", "990000", "99ff00", "9900ff", "ff9900", "ff0099", "550000", "55ff00", "5500ff"]
 for foo in range(0,modnum):
     intro +="""
