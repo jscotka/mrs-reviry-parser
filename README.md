@@ -19,7 +19,7 @@ Select your interest part and call code:
 
 Usage:
 
- `$ ./parser-exact.py --help
+ $ ./parser-exact.py --help
 Usage: parser-exact.py [options]
 
 Options:
@@ -29,4 +29,4 @@ Options:
   -o FILEOUTPUT, --output=FILEOUTPUT
                         write results to file
   -q, --quiet           don't print debug messages
-`
+
