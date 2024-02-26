@@ -3,7 +3,7 @@ This tool creates KML map from "soupis reviru" form MRS text file
 It allow also to use CRS sources, it had to be converted to txt via:
 
 ## New parser from web of MRS
- It it connected with page http://mrsbrno.cz/index.php/kontakty/33-seznam-reviru/142-seznam-rybarskych-reviru-mimopstruhovych
+ It it connected with page https://z.mrsbrno.cz/index.php/rybarske-reviry/ct-menu-item-12
 It parse it and creates `KML` file as output eg.: `./parser-mrs-url.py -o output.kml
 `
 

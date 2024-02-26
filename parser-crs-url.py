@@ -1,37 +1,51 @@
 #!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
-import os, sys, re
+import os.path
+import sys
+import re
 import click
-from html import parser
-from urllib import request, response
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.common.by import By
+from selenium.common.exceptions import NoSuchElementException
+from time import sleep
+import yaml
+
+from selenium.webdriver.firefox.options import Options
 
 
 
-def get_reviry_list(url, separator="<br />", match="""a href="/index.php/14-mimopstruhove-reviry/"""):
-    output = []
-    urlparser = request.urlparse(url)
-    with request.urlopen(url) as basepage:
-        htmlpage = basepage.read().decode()
-        for item in htmlpage.split(separator):
-            if match in item:
-                rematch = re.search('href="([^"]+)"', item)
-                if rematch:
-                    output.append(f"{urlparser.scheme}://{urlparser.netloc}{rematch.groups()[0]}")
+def get_reviry_params(url):
+    options = Options()
+    options.set_preference('intl.accept_languages', 'cz-CZ, cz')
+
+    driver = webdriver.Firefox(options=options)
+
+    driver.get(url)
+    output = dict()
+    elements = driver.find_elements(By.XPATH, "//tr[contains(@id,'revir_')]")
+    clicks = [x.get_attribute("onClick") for x in elements]
+    for item in clicks:
+        driver.execute_script(item)
+        sleep(6)
+        try:
+            name = driver.find_element(By.TAG_NAME, "H3").text
+        except NoSuchElementException:
+            print("ERROR name:", item)
+            continue
+        allitems = driver.find_elements(By.TAG_NAME, "FIELDSET")
+        desc = ""
+        for field in allitems:
+            if field.text.startswith("Popis"):
+                desc = field.text
+        mapy_link = ""
+        try:
+            mapy = driver.find_element(By.XPATH, "//a[contains(@href,'/inc/mapy.php')]")
+            mapy_link = f"https://www.rybsvaz.cz/{mapy.get_attribute('href')}"
+        except NoSuchElementException:
+            print("ERROR MAPA:", item)
+        output[name] = f"{desc}\n{mapy_link}"
+        driver.back()
     return output
-
-def parser_revir_page(url):
-    with request.urlopen(url) as page:
-        readed = page.read().decode()
-        sep = """<article class="art-post">"""
-        sep2 = """</article>"""
-        tmp = readed.split(sep)[1].split(sep2)[0]
-        tmp = re.sub(r"</div>", "\n", tmp)
-        tmp = re.sub(r"</span>", " ", tmp)
-        tmp = re.sub(r"<.?br[^>]+>", "\n", tmp)
-        tmp = re.sub(r"<[^>]+>", " ", tmp)
-        tmp = re.sub(r"&[^;]+;", "", tmp)
-        return tmp
 
 def strip_list(inp):
     output = []
@@ -39,18 +53,14 @@ def strip_list(inp):
         if item is not None:
             output.append(item.strip())
 
-def revir_data(text):
-    jmeno = ""
+def revir_data(text, revir_name):
+    jmeno = revir_name
     jmeno_add = ""
     GPS = {}
     for line in text.split("\n"):
         #print(">>:", line, file=sys.stderr)
         stripped_line = line.strip()
-        if not jmeno:
-            jmeno = stripped_line
-            jmeno_add = jmeno
-            print("REVIR:", jmeno, file=sys.stderr)
-            continue
+        print("REVIR:", jmeno, file=sys.stderr)
 
         # podrevir
         search = re.search('^\d+\..*ha', stripped_line)
@@ -60,33 +70,30 @@ def revir_data(text):
             continue
 
         # reka
-        search = re.search('^GPS.*Z:(.+)K:(.+)', stripped_line)
-        if search:
-            zacatek = search.groups()[0].split("N")
-            konec = search.groups()[1].split("N")
+        search1 = re.search('^\(?GPS.*Z:(.+)K:(.+)', stripped_line)
+        # rybnik
+        search2 = re.search('^\(GPS(.*)', stripped_line)
+        # ostani
+        search3 = re.findall(r'GPS\S*\s+([^N]+N\S*\s+[^E]+E)', line)
+
+        if search1:
+            zacatek = search1.groups()[0].split("N")
+            konec = search1.groups()[1].split("N")
             GPS[jmeno_add] = (convert(zacatek[0]), convert(zacatek[1]), convert(konec[0]), convert(konec[1]))
             print("adding reka", zacatek, konec, file=sys.stderr)
-            continue
-
-        # rybnik
-        search = re.search('^GPS(.*)', stripped_line)
-        if search:
-            zacatek = search.group(0).split("N")
+        elif search2:
+            zacatek = search2.group(0).split("N")
             if len(zacatek) < 2:
                 raise Exception(f"BAD GPS {zacatek}")
             GPS[jmeno_add] = (convert(zacatek[0]), convert(zacatek[1]))
             print("adding rybnik", zacatek)
-            continue
+        else:
+            for item in search3:
+                #print(">>>>>>>>>>>", search)
+                zacatek = item.split("N")
 
-        # misto ci zakaz
-        search_all = re.findall(r'GPS\S*\s+([^N]+N\S*\s+[^E]+E)', line)
-        for search in search_all:
-            #print(">>>>>>>>>>>", search)
-            zacatek = search.split("N")
-
-            GPS[f"ZAKAZ ci RYBNIK: {search}"] = (convert(zacatek[0]), convert(zacatek[1]))
-            print("ZAKAZ ci RYBNIK", zacatek, file=sys.stderr)
-            continue
+                GPS[f"ZAKAZ ci RYBNIK: {item}"] = (convert(zacatek[0]), convert(zacatek[1]))
+                print("ZAKAZ ci RYBNIK", zacatek, file=sys.stderr)
     return jmeno, GPS
 
 
@@ -139,12 +146,12 @@ def output_to_file(filename, reviry):
         outfile.write(intro)
 
         count=0
-        for revir_name, revir_data in reviry.items():
+        for revir_name, data in reviry.items():
             count += 1
-            for k, v in revir_data['GPS'].items():
+            for k, v in data['GPS'].items():
                 outfile.write('<Placemark>\n')
                 outfile.write(f'<name>{revir_name}</name>')
-                description = revir_data["data"]
+                description = data["data"]
                 outfile.write(f'<description>\nJmeno: {k}\n\n{description}</description>')
                 if "ZAKAZ" in k:
                     outfile.write('<styleUrl>#nevim{0}</styleUrl>\n'.format(count % modnum))
@@ -161,14 +168,21 @@ def output_to_file(filename, reviry):
 
 
 @click.command()
-@click.option("--url", "-u", default="https://z.mrsbrno.cz/index.php/rybarske-reviry/ct-menu-item-12")
-@click.option("--outputfile", "-o", default="mrs-reviry-mimopstruhove.kml")
+@click.option("--url", "-u", default="https://www.rybsvaz.cz/pages_cz/reviry/reviry.php?page=reviry%2Freviry&lang=cz&fromIDS=&typ=mpr&id_svaz=7&id_r1=471")
+@click.option("--outputfile", "-o", default="crs-reviry-mimopstruhove.kml")
 @click.option("--quiet", "-q", is_flag=True, default=False)
 def parser(url, outputfile, quiet):
     reviry = {}
-    for item in get_reviry_list(url):
-        text = parser_revir_page(item)
-        jmeno, GPS = revir_data(text)
+    tempfile = f"{outputfile}.yaml"
+    if os.path.exists(tempfile):
+        with open(tempfile) as fd:
+            data = yaml.safe_load(fd)
+    else:
+        data = get_reviry_params(url)
+        with open(tempfile, "w") as fd:
+            fd.write(yaml.safe_dump(data))
+    for int_name, text in data.items():
+        jmeno, GPS = revir_data(text, int_name)
         reviry[jmeno] = {'GPS': GPS, 'data': text}
     output_to_file(outputfile, reviry)
 
@@ -176,3 +190,4 @@ def parser(url, outputfile, quiet):
 
 if __name__ == '__main__':
     parser()
+
