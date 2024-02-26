@@ -113,35 +113,33 @@ def convert(coor):
     return output
 
 
-def output_to_file(filename, reviry):
+def output_to_file(filename, reviry, color="00ff00", icon_rybnik="https://icones.pro/wp-content/uploads/2022/09/icones-de-poisson-orange.png", icon_nevim="https://www.freeiconspng.com/img/41652"):
     with open(filename, mode="w") as outfile:
         intro="""<?xml version="1.0" encoding="UTF-8"?>
                  <kml xmlns="http://www.opengis.net/kml/2.2">
                 <Document>
     """
-        modnum=1
-        colors=["ff0000", "ffff00", "ff00ff", "990000", "99ff00", "9900ff", "ff9900", "ff0099", "550000", "55ff00", "5500ff"]
-        for foo in range(0, modnum):
-            intro +="""
-                <Style id="reka{0}">
-                    <LineStyle>
-                    <color>ff{1}</color>
-                    <width>4</width>
-                    </LineStyle>
-                </Style>
-                <Style id="rybnik{0}">
-                    <IconStyle>
-                    <color>ff{1}</color>
-                    <Icon><href>http://www.gstatic.com/mapspro/images/stock/1363-rec-fish.png</href></Icon>
-                    </IconStyle>
-                </Style>
-                <Style id="nevim{0}">
-                    <IconStyle>
-                    <color>ff{1}</color>
-                    <Icon><href>https://www.freeiconspng.com/img/41652</href></Icon>
-                    </IconStyle>
-                </Style>
-                    """.format(foo, colors[foo])
+
+        intro +=f"""
+            <Style id="reka">
+                <LineStyle>
+                <color>ff{color}</color>
+                <width>4</width>
+                </LineStyle>
+            </Style>
+            <Style id="rybnik">
+                <IconStyle>
+                <color>ff{color}</color>
+                <Icon><href>{icon_rybnik}</href></Icon>
+                </IconStyle>
+            </Style>
+            <Style id="nevim">
+                <IconStyle>
+                <color>ff{color}</color>
+                <Icon><href>{icon_nevim}</href></Icon>
+                </IconStyle>
+            </Style>
+                """
 
         outfile.write(intro)
 
@@ -154,13 +152,13 @@ def output_to_file(filename, reviry):
                 description = data["data"]
                 outfile.write(f'<description>\nJmeno: {k}\n\n{description}</description>')
                 if "ZAKAZ" in k:
-                    outfile.write('<styleUrl>#nevim{0}</styleUrl>\n'.format(count % modnum))
+                    outfile.write('<styleUrl>#nevim</styleUrl>\n')
                     outfile.write('<Point> <coordinates>{0},{1}\n</coordinates> </Point>\n'.format(v[1], v[0]))
                 elif len(v) == 2:
-                    outfile.write('<styleUrl>#rybnik{0}</styleUrl>\n'.format(count%modnum))
+                    outfile.write('<styleUrl>#rybnik</styleUrl>\n')
                     outfile.write('<Point> <coordinates>{0},{1}\n</coordinates> </Point>\n'.format(v[1], v[0]))
                 elif len(v) == 4:
-                    outfile.write('<styleUrl>#reka{0}</styleUrl>\n'.format(count%modnum))
+                    outfile.write('<styleUrl>#reka</styleUrl>\n')
                     outfile.write('<LineString><tessellate>1</tessellate><coordinates>{0},{1}\n{2},{3}\n</coordinates> </LineString>\n'.format(v[1], v[0], v[3], v[2]))
                 outfile.write('</Placemark>')
         outfile.write('</Document>\n')
