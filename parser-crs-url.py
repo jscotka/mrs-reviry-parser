@@ -31,7 +31,7 @@ def get_reviry_params(url):
             name = driver.find_element(By.TAG_NAME, "H3").text
         except NoSuchElementException:
             print("ERROR name:", item)
-            continue
+            name = "ERROR:"  + str(item)
         allitems = driver.find_elements(By.TAG_NAME, "FIELDSET")
         desc = ""
         for field in allitems:
@@ -43,7 +43,7 @@ def get_reviry_params(url):
             mapy_link = f"https://www.rybsvaz.cz/{mapy.get_attribute('href')}"
         except NoSuchElementException:
             print("ERROR MAPA:", item)
-        output[name] = f"{desc}\n{mapy_link}"
+        output[name] = [desc, mapy_link, driver.page_source]
         driver.back()
     return output
 
@@ -181,7 +181,10 @@ def parser(url, outputfile, quiet):
         data = get_reviry_params(url)
         with open(tempfile, "w") as fd:
             fd.write(yaml.safe_dump(data))
-    for int_name, text in data.items():
+    for int_name, fields in data.items():
+        text = fields[0]
+        map_item = fields[1]
+        page_source = fields[2]
         jmeno, GPS = revir_data(text, int_name)
         reviry[jmeno] = {'GPS': GPS, 'data': text}
     output_to_file(outputfile, reviry)
